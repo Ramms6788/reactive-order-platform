@@ -1,40 +1,37 @@
 package org.example.reactiveorderplatform.service;
 
+import org.example.reactiveorderplatform.exception.PaymentDeclinedException;
+import org.example.reactiveorderplatform.exception.PaymentTimeoutException;
 import org.example.reactiveorderplatform.model.Order;
 import org.example.reactiveorderplatform.model.PaymentResult;
 import org.example.reactiveorderplatform.model.PaymentStatus;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@Service
 public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public CompletableFuture<PaymentResult> charge(Order order) {
         return CompletableFuture.supplyAsync(() -> {
-            final var paymentResult = PaymentResult.builder()
-                    .orderId(order.getId());
+                    Utils.simulateLatency(500);
 
-            try {
-                Thread.sleep(500);
+                    if (Math.random() < 0.3)
+                        throw new PaymentDeclinedException("Card declined");
 
-                paymentResult
-                        .transactionId(UUID.randomUUID())//TODO this will be received from actual payment provider
-                        .status(PaymentStatus.SUCCESS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                    if (Math.random() < 0.2)
+                        throw new PaymentTimeoutException("Payment provider timed out");
 
-                paymentResult
-                        .status(PaymentStatus.TIMEOUT)
-                        .failureReason(e.getMessage());
-            } catch (Exception e) {
-                paymentResult
-                        .status(PaymentStatus.PROCESSOR_ERROR)
-                        .failureReason(e.getMessage());
-            }
-
-            return paymentResult.processedAt(LocalDateTime.now()).build();
-        });
+                    return PaymentResult.builder()
+                            .orderId(order.getId())
+                            .transactionId(UUID.randomUUID())//TODO this will be received from actual payment provider
+                            .status(PaymentStatus.SUCCESS)
+                            .processedAt(LocalDateTime.now())
+                            .build();
+                }
+        );
     }
 }

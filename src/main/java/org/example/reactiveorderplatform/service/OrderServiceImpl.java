@@ -1,12 +1,14 @@
 package org.example.reactiveorderplatform.service;
 
-import lombok.Builder;
+import lombok.RequiredArgsConstructor;
 import org.example.reactiveorderplatform.model.Order;
 import org.example.reactiveorderplatform.model.OrderConfirmation;
+import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
 
-@Builder
+@Service
+@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderValidationService orderValidationService;
@@ -14,15 +16,14 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryService       inventoryService;
 
     @Override
-    public void processOrder(Order order) {
+    public CompletableFuture<OrderConfirmation> processOrder(Order order) {
         orderValidationService.validate(order);
 
         final var paymentResult     = paymentService.charge(order);
         final var reservationResult = inventoryService.reserve(order);
 
-        CompletableFuture.allOf(paymentResult, reservationResult)
-                .thenAccept(v -> {
-                    OrderConfirmation.success(order, paymentResult.join(), reservationResult.join());
-                });
+        return CompletableFuture.allOf(paymentResult, reservationResult)
+                .thenApply(_ -> OrderConfirmation.success(order, paymentResult.join(), reservationResult.join()))
+                .exceptionally(ex -> OrderConfirmation.failed(order, ex.getCause()));
     }
 }
