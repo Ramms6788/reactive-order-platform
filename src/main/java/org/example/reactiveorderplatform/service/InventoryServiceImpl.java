@@ -5,17 +5,17 @@ import org.example.reactiveorderplatform.model.Order;
 import org.example.reactiveorderplatform.model.ReservationResult;
 import org.example.reactiveorderplatform.model.ReservationStatus;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 public class InventoryServiceImpl implements InventoryService {
 
     @Override
-    public CompletableFuture<ReservationResult> reserve(Order order) {
-        return CompletableFuture.supplyAsync(() -> {
+    public Mono<ReservationResult> reserve(Order order) {
+        return Mono.fromCallable(() -> {
             Utils.simulateLatency(300);
 
             if (Math.random() < 0.2)
