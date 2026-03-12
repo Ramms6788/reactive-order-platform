@@ -18,8 +18,8 @@ public class InventoryServiceImpl implements InventoryService {
         return Mono.fromCallable(() -> {
             Utils.simulateLatency(300);
 
-            if (Math.random() < 0.2)
-                throw new InsufficientStockException("Product out of stock");
+//            if (Math.random() < 0.2)
+//                throw new InsufficientStockException("Product out of stock");
 
             return ReservationResult.builder()
                     .orderId(order.getId())

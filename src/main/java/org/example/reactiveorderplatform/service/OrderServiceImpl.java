@@ -16,11 +16,16 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Mono<OrderConfirmation> processOrder(Order order) {
-        return Mono.fromRunnable(() -> orderValidationService.validate(order))
-                .then(Mono.zip(
-                        paymentService.charge(order),
-                        inventoryService.reserve(order)
-                ))
+        orderValidationService.validate(order);
+
+        final var paymentResultMono    = paymentService.charge(order);
+        final var reservationResult    = inventoryService.reserve(order);
+
+        return Mono.zip(
+                        paymentResultMono,
+                        reservationResult
+                )
+//                .log()
                 .map(tuple -> OrderConfirmation.success(order, tuple.getT1(), tuple.getT2()));
 
     }

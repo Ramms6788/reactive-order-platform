@@ -27,11 +27,11 @@ public class PaymentServiceImpl implements PaymentService {
         return Mono.fromCallable(() -> {
                     Utils.simulateLatency(500);
 
-                    if (Math.random() < 0.3)
-                        throw new PaymentDeclinedException("Card declined");
-
-                    if (Math.random() < 0.2)
-                        throw new PaymentTimeoutException("Payment provider timed out");
+//                    if (Math.random() < 0.3)
+//                        throw new PaymentDeclinedException("Card declined");
+//
+//                    if (Math.random() < 0.2)
+//                        throw new PaymentTimeoutException("Payment provider timed out");
 
                     return PaymentResult.builder()
                             .orderId(order.getId())

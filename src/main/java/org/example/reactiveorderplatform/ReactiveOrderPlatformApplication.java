@@ -4,9 +4,7 @@ import org.example.reactiveorderplatform.model.Order;
 import org.example.reactiveorderplatform.model.OrderStatus;
 import org.example.reactiveorderplatform.pipeline.OrderProcessor;
 import org.example.reactiveorderplatform.pipeline.OrderPublisher;
-import org.example.reactiveorderplatform.service.OrderService;
-import org.example.reactiveorderplatform.service.OrderServiceImpl;
-import org.example.reactiveorderplatform.service.Utils;
+import org.example.reactiveorderplatform.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
@@ -37,8 +35,11 @@ public class ReactiveOrderPlatformApplication {
     }
 
     @Bean
-    public OrderSimulationService orderProcessingService(OrderService orderService) {
-        return new OrderSimulationService(orderService);
+    public OrderSimulationService orderProcessingService(OrderService orderService,
+                                                         CustomerService   customerService,
+                                                         FraudCheckService fraudCheckService,
+                                                         FraudNotificationService fraudNotificationService) {
+        return new OrderSimulationService(orderService, customerService, fraudCheckService, fraudNotificationService);
     }
 
 
