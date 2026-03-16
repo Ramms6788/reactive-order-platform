@@ -15,4 +15,14 @@ public class ReservationResult {
     private ReservationStatus status;
     private List<UUID>        unavailableProducts;  // empty if all available
     private LocalDateTime     processedAt;
+
+    public static ReservationResult backorder(Order order) {
+        return ReservationResult.builder()
+                .reservationId(UUID.randomUUID())
+                .orderId(order.getId())
+                .unavailableProducts(order.getItems().stream().map(OrderItem::getProductId).toList())
+                .status(ReservationStatus.BACKORDERED)
+                .processedAt(LocalDateTime.now())
+                .build();
+    }
 }

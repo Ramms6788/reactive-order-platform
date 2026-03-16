@@ -3,7 +3,9 @@ package org.example.reactiveorderplatform;
 import jakarta.annotation.PostConstruct;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.reactiveorderplatform.model.Order;
+import org.example.reactiveorderplatform.model.OrderConfirmation;
 import org.example.reactiveorderplatform.model.OrderWrapper;
 import org.example.reactiveorderplatform.service.*;
 import reactor.core.publisher.Flux;
@@ -12,6 +14,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.Duration;
 
+@Slf4j
 @RequiredArgsConstructor
 public class OrderSimulationService {
 
@@ -19,13 +22,14 @@ public class OrderSimulationService {
     private final CustomerService          customerService;
     private final FraudCheckService        fraudCheckService;
     private final FraudNotificationService fraudNotificationService;
+    private final DeadLetterService        deadLetterService;
 
     @PostConstruct
     public void init() {
 //        simulateOrderProcessing(Utils.generateOrders(20));
         Flux.merge(
-                        restApiOrders(Utils.generateOrders(10)),
-                        messageQueueOrders(Utils.generateOrders(10))
+                        restApiOrders(Utils.generateOrders(50)),
+                        messageQueueOrders(Utils.generateOrders(50))
                 )
 //                .log()
                 .distinct(Order::getCustomerId)
@@ -52,17 +56,27 @@ public class OrderSimulationService {
                     if (group.key())
                         //looks like in terms of performance not much changed and there is no difference in vip processing
                         return group
-                                .doOnNext(orderWrapper -> System.out.println("Is VIP = " + orderWrapper.getCustomerDetails().isVip() + " OrderId = " + orderWrapper.getOrder().getId()))
-                                .concatMap(orderWrapper -> orderService.processOrder(orderWrapper.getOrder()));//20 seconds overall
+                                .doOnNext(orderWrapper -> log.info("Is VIP = {} OrderId = {}", orderWrapper.getCustomerDetails().isVip(), orderWrapper.getOrder().getId()))
+                                .concatMap(this::_processOrder);//20 seconds overall
 //                        return group
 //                                .doOnNext(orderWrapper -> System.out.println("Is VIP = " + orderWrapper.getCustomerDetails().isVip() + " OrderId = " + orderWrapper.getOrder().getId()))
 //                                .flatMap(orderWrapper -> orderService.processOrder(orderWrapper.getOrder()));//20 seconds overall
                     else
                         return group
-                                .doOnNext(orderWrapper -> System.out.println("Is VIP = " + orderWrapper.getCustomerDetails().isVip() + " OrderId = " + orderWrapper.getOrder().getId()))
-                                .flatMap(orderWrapper -> orderService.processOrder(orderWrapper.getOrder()));
+                                .doOnNext(orderWrapper -> log.info("Is VIP = {} OrderId = {}", orderWrapper.getCustomerDetails().isVip(), orderWrapper.getOrder().getId()))
+                                .flatMap(this::_processOrder);
                 })
                 .subscribe();
+    }
+
+    private Mono<OrderConfirmation> _processOrder(OrderWrapper orderWrapper) {
+        return orderService.processOrder(orderWrapper.getOrder())
+                .doOnError(e -> {
+                    log.error("Error processing order {}. Caused by: {}", orderWrapper.getOrder().getId(), e.getMessage());
+                    deadLetterService.save(orderWrapper.getOrder(), e);
+                })
+                .onErrorResume(e -> Mono.just(OrderConfirmation.failed(orderWrapper.getOrder(), e)));
+
     }
 
     public Flux<Order> restApiOrders(@NonNull Iterable<Order> orders) {

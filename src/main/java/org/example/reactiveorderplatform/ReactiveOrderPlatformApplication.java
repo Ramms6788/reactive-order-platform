@@ -38,8 +38,9 @@ public class ReactiveOrderPlatformApplication {
     public OrderSimulationService orderProcessingService(OrderService orderService,
                                                          CustomerService   customerService,
                                                          FraudCheckService fraudCheckService,
-                                                         FraudNotificationService fraudNotificationService) {
-        return new OrderSimulationService(orderService, customerService, fraudCheckService, fraudNotificationService);
+                                                         FraudNotificationService fraudNotificationService,
+                                                         DeadLetterService deadLetterService) {
+        return new OrderSimulationService(orderService, customerService, fraudCheckService, fraudNotificationService, deadLetterService);
     }
 
 

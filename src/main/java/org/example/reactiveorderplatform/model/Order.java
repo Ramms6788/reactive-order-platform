@@ -2,7 +2,6 @@ package org.example.reactiveorderplatform.model;
 
 import lombok.Builder;
 import lombok.Data;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
